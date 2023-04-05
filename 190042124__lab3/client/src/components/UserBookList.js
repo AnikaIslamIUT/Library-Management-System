@@ -106,31 +106,7 @@ export default function BookListLayout() {
                 <td>{book.author}</td>
 
                 <td>{book.genre}</td>
-                <td>
-                <Link to={`/updateBook/${book.id}`} >
                 
-                  <button
-                    type="button"
-                    class="btn btn-success"
-                    data-bs-toggle="modal"
-                    data-bs-target="#staticBackdrop"
-                  >
-                    Update
-                  </button>
-                  </Link>
-
-                  
-                </td>
-                <td>
-                  <button
-                    onClick={() => {
-                      deleteBook(book.id);
-                    }}
-                    className="btn btn-danger"
-                  >
-                    Delete
-                  </button>
-                </td>
                 <td>
                 <Link to={`/borrowBook/${book.id}`} >
                 
@@ -170,11 +146,7 @@ export default function BookListLayout() {
           </nav>
         </div>
        
-        <NavLink to="/">
-          <button type="submit" class="btn btn-info">
-            Add more
-          </button>
-        </NavLink>
+        
       </div>
     </div>
   );

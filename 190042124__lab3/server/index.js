@@ -4,6 +4,7 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const app = express()
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 app.use(cors())
 app.use(express.json())
 
@@ -24,7 +25,7 @@ const createUserTable = `CREATE TABLE IF NOT EXISTS users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   username VARCHAR(255) NOT NULL,
   password VARCHAR(255) NOT NULL,
-  role ENUM('student', 'faculty') NOT NULL,
+  role ENUM('student', 'faculty','librarian') NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )`;
 
@@ -34,7 +35,21 @@ db.query(createUserTable, (err, result) => {
   }
 });
 
-//////
+const borrow = `CREATE TABLE IF NOT EXISTS borrow (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  userid INT NOT NULL,
+  bookid INT NOT NULL,
+  due_date DATE NOT NULL
+)`;
+
+
+db.query( borrow, (err, result) => {
+  if (err) {
+    console.log(err);
+  }
+});
+
+////// User registration
 
 const secretKey = 'yourSecretKey'; // change this to a secure key
 
@@ -52,7 +67,7 @@ function hashPassword(password) {
 function comparePasswords(password, hash) {
   return bcrypt.compareSync(password, hash);
 }
-
+//login
 app.post('/login', (req, res) => {
   const { username, password } = req.body;
   const sql = 'SELECT * FROM users WHERE username = ?';
@@ -138,6 +153,81 @@ app.delete('/users/:id', (req, res) => {
 
 
 //////
+
+// Borrow a material
+app.get('/userBorrow/:id/:bookId', (req, res) => {
+  const {id,bookId} = req.params;
+   
+
+  // Get the username based on the userID
+  const sqlGet ='SELECT username FROM users WHERE id = ?';
+
+      // Your borrowing logic goes here
+      // ...
+      db.query(sqlGet,id,(err,result)=>{
+        console.log(result);
+        res.send(result);
+    
+      });
+
+      //res.send(`Book ${bookId} has been borrowed by user ${username} (${userId}).`);
+    
+    });
+
+
+app.post("/borrow", async (req, res) => {
+  const { userId, bookId } = req.body;
+  const due_date = moment().add(14, "days").format("YYYY-MM-DD");
+
+  try {
+    const connection = await pool.getConnection();
+    const [rows] = await connection.query(
+      "INSERT INTO borrow (user_id, material_id, due_date) VALUES (?, ?, ?)",
+      [user_id, material_id, due_date]
+    );
+    connection.release();
+
+    res.status(200).json({ message: "Material borrowed successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// Return a material
+app.post("/return", async (req, res) => {
+  const { user_id, material_id } = req.body;
+
+  try {
+    const connection = await pool.getConnection();
+    const [rows] = await connection.query(
+      "DELETE FROM borrow WHERE user_id = ? AND material_id = ?",
+      [user_id, material_id]
+    );
+    connection.release();
+
+    res.status(200).json({ message: "Material returned successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// Get all overdue materials
+app.get("/overdue", async (req, res) => {
+  try {
+    const connection = await pool.getConnection();
+    const [rows] = await connection.query(
+      "SELECT * FROM borrow WHERE due_date < CURDATE()"
+    );
+    connection.release();
+
+    res.status(200).json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
 
 
 app.get("/bookList",(req,res)=>{
